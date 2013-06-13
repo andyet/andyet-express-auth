@@ -5,7 +5,7 @@ var _ = require('underscore'),
     querystring = require('querystring');
 
 
-function AndBangMiddleware() {
+function AndYetMiddleware() {
     var self = this;
 
     this.showHelp = function (message) {
@@ -15,7 +15,7 @@ function AndBangMiddleware() {
             "_____________________________________________________________",
             "",
             "var express = require('express'),",
-            "    auth = require('andbang-express-auth'),",
+            "    auth = require('andyet-express-auth'),",
             "    app = express();",
             "",
             "",
@@ -29,9 +29,9 @@ function AndBangMiddleware() {
             "});",
             "",
             "",
-            "// a route that requires being logged in with andbang",
+            "// a route that requires being logged in with your &yet account",
             "app.get('/my-secured-route', auth.secure(), function (req, res) {",
-            "    // req.user is everything we know about the andbang user",
+            "    // req.user is everything we know about the andyet user",
             "    // req.token is now the auth token",
             "    res.send(req.user)",
             "});",
@@ -54,8 +54,8 @@ function AndBangMiddleware() {
         }, config);
 
         // set our account and API urls
-        this.accountsUrl = config.accountsUrl || (config.local ? 'http://localhost:3001' : 'https://accounts.andbang.com');
-        this.apiUrl = config.apiUrl || (config.local ? 'http://localhost:3000' : 'https://api.andbang.com');
+        this.accountsUrl = config.accountsUrl || (config.local ? 'http://localhost:3001' : 'https://apps.andyet.com');
+        this.apiUrl = config.apiUrl || (config.local ? 'http://localhost:3000' : 'https://api.shippy.io');
         this.onRefreshToken = config.onRefreshToken || function (user, token, cb) { cb(); };
 
         // The login route. If we already have a token in the session we'll
@@ -82,15 +82,15 @@ function AndBangMiddleware() {
             });
         });
 
-        this.app.get('/auth/andbang/callback', function (req, response) {
+        this.app.get('/auth/andyet/callback', function (req, response) {
             var result = querystring.parse(req.url.split('?')[1]);
 
             if (result.error) {
-                return response.redirect('/auth/andbang/failed');
+                return response.redirect('/auth/andyet/failed');
             }
 
             if (result.state != req.session.oauthState) {
-                return response.redirect('/auth/andbang/failed');
+                return response.redirect('/auth/andyet/failed');
             }
 
             request.post({
@@ -120,12 +120,12 @@ function AndBangMiddleware() {
                         });
                     });
                 } else {
-                    response.redirect('/auth/andbang/failed');
+                    response.redirect('/auth/andyet/failed');
                 }
             });
         });
 
-        this.app.get('/auth/andbang/failed', function (req, res) {
+        this.app.get('/auth/andyet/failed', function (req, res) {
             res.clearCookie('accessToken');
             res.redirect('/auth');
         });
@@ -159,7 +159,7 @@ function AndBangMiddleware() {
                     req.session.user = body;
                     next();
                 } else {
-                    res.redirect('/auth/andbang/failed');
+                    res.redirect('/auth/andyet/failed');
                 }
             });
         }
@@ -195,11 +195,11 @@ function AndBangMiddleware() {
                             return self.userRequired(req, res, next);
                         }
                     }
-                    res.redirect('/auth/andbang/failed');
+                    res.redirect('/auth/andyet/failed');
                 });
             }
         };
     };
 }
 
-module.exports = new AndBangMiddleware();
+module.exports = new AndYetMiddleware();

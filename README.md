@@ -1,12 +1,12 @@
-# And Bang auth middleware for Express.js
+# &yet auth middleware for Express.js
 
 World's simplest OAuth. 
 
-1. Sign up for an And Bang account at https://andbang.com
-2. Register your application at https://accounts.andbang.com/developer
+1. Sign up for an &yet account at https://apps.andyet.com
+2. Register your application at https://apps.andyet.com/developer
 
-   When setting your redirect URL, make sure your path is `/auth/andbang/callback`.
-   For example: `localhost:9000/auth/andbang/callback`
+   When setting your redirect URL, make sure your path is `/auth/andyet/callback`.
+   For example: `localhost:9000/auth/andyet/callback`
 
 3. Copy your app's client ID and secret, and insert them into the middleware's
    constructor, like in the example below.
@@ -18,13 +18,13 @@ The code below should work once you've dropped in your client ID and secret:
 
 ```js
 var express = require('express'),
-    andbangAuth = require('andbang-express-auth'),
+    andyetAuth = require('andyet-express-auth'),
     app = express();
 
 // config our middleware
 app.use(express.cookieParser());
 app.use(express.session({ secret: 'keyboard cat' }));
-app.use(andbangAuth.middleware({
+app.use(andyetAuth.middleware({
     app: app,
     clientId: '<< YOUR CLIENT ID>>',
     clientSecret: '<< YOUR CLIENT SECRET>>',
@@ -38,7 +38,7 @@ app.get('/', function (req, res) {
 
 // For routes where you want to require login,
 // add the middleware like this:
-app.get('/secured', andbangAuth.secure(), function (req, res) {
+app.get('/secured', andyetAuth.secure(), function (req, res) {
     res.send(req.session.user);
 });
 
