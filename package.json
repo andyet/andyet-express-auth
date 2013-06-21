@@ -1,7 +1,7 @@
 {
   "name": "andyet-express-auth",
   "description": "Dead simple &yet auth middleware.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "dependencies": {
     "bucker": "0.4.0",
     "getconfig": "0.0.5",

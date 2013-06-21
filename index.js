@@ -7,7 +7,7 @@ var _ = require('underscore'),
 
 
 config.andyetAPIs = _.extend({
-    'accounts': 'https://apps.andyet.com',
+    'apps': 'https://apps.andyet.com',
     'shippy': 'https://api.shippy.io',
     'talky': 'https://api.talky.io'
 }, config.andyetAPIs || {});
@@ -48,7 +48,7 @@ function AndYetMiddleware() {
                 req.session.nextUrl = req.query.next;
             }
             req.session.save(function () {
-                var url = config.andyetAPIs.accounts + '/oauth/authorize?' + querystring.stringify({
+                var url = config.andyetAPIs.apps + '/oauth/authorize?' + querystring.stringify({
                     response_type: 'code',
                     client_id: config.andyetAuth.id,
                     state: req.session.oauthState
@@ -71,7 +71,7 @@ function AndYetMiddleware() {
             }
 
             request.post({
-                url: config.andyetAPIs.accounts + '/oauth/access_token',
+                url: config.andyetAPIs.apps + '/oauth/access_token',
                 strictSSL: true,
                 form: {
                     code: result.code,
@@ -156,7 +156,7 @@ function AndYetMiddleware() {
                 return res.redirect('/auth');
             } else {
                 request.post({
-                    url: config.andyetAPIs.accounts + '/oauth/validate',
+                    url: config.andyetAPIs.apps + '/oauth/validate',
                     strictSSL: true,
                     form: {
                         access_token: cookieToken,
