@@ -4,12 +4,12 @@
   "version": "0.1.0",
   "dependencies": {
     "bucker": "0.4.0",
-    "express": "3.x",
     "getconfig": "0.0.5",
     "request": "2.21.0"
   },
   "devDependencies": {
-      "precommit-hook": "0.3.4"
+    "express": "3.x",
+    "precommit-hook": "0.3.4"
   },
   "main": "index.js"
 }
