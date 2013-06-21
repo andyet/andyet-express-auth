@@ -1,62 +1,37 @@
 var _ = require('underscore'),
-    colors = require('colors'),
+    config = require('getconfig'),
     crypto = require('crypto'),
     request = require('request'),
-    querystring = require('querystring');
+    querystring = require('querystring'),
+    log = require('bucker').createLogger(config.bucker, module);
+
+
+config.apis = _.extend({
+    'accounts': 'https://apps.andyet.com',
+    'shippy': 'https://api.shippy.io',
+    'talky': 'https://api.talky.io'
+}, config.apis || {});
 
 
 function AndYetMiddleware() {
     var self = this;
 
-    this.showHelp = function (message) {
-        var output = [
-            "\n",
-            message.red,
-            "_____________________________________________________________",
-            "",
-            "var express = require('express'),",
-            "    auth = require('andyet-express-auth'),",
-            "    app = express();",
-            "",
-            "",
-            "app.use(express.cookieParser());",
-            "app.use(express.session({ secret: 'keyboard cat' }));",
-            "app.use(auth.middleware({",
-            "    app: app",
-            "    clientId: 'YOUR CLIENT ID',",
-            "    clientSecret: 'YOUR CLIENT SECRET',",
-            "    defaultRedirect: '/app'",
-            "});",
-            "",
-            "",
-            "// a route that requires being logged in with your &yet account",
-            "app.get('/my-secured-route', auth.secure(), function (req, res) {",
-            "    // req.user is everything we know about the andyet user",
-            "    // req.token is now the auth token",
-            "    res.send(req.user)",
-            "});",
-            "_____________________________________________________________",
-            "",
-            ""
-        ].join('\n');
-        console.log(output);
-    };
-
-    this.middleware = function (config) {
+    this.middleware = function (app, opts) {
         var self = this;
-        if (!config.app || !config.clientId || !config.clientSecret || !config.defaultRedirect) {
-            this.showHelp('You have to pass the app, clientId and clientSecret and a default redirect. For example:');
+
+        self.app = app;
+
+        if (!opts.defaultRedirect) {
+            log.warn('Missing defaultRedirect in andyetAuth settings, using "/"');
+        }
+        if (!opts.api) {
+            log.warn('Missing api in andyetAuth settings, using "shippy"');
         }
 
-        // store our configs as properties
-        _.extend(this, {
-            loggedOutRedirect: '/'
-        }, config);
-
-        // set our account and API urls
-        this.accountsUrl = config.accountsUrl || (config.local ? 'http://localhost:3001' : 'https://apps.andyet.com');
-        this.apiUrl = config.apiUrl || (config.local ? 'http://localhost:3000' : 'https://api.shippy.io');
-        this.onRefreshToken = config.onRefreshToken || function (user, token, cb) { cb(); };
+        self.api = opts.api || 'shippy';
+        self.defaultRedirect = opts.defaultRedirect || '/';
+        self.loggedOutRedirect = opts.loggedOutRedirect || '/';
+        self.onRefreshToken = opts.onRefreshToken || function (user, token, cb) { cb(); };
 
         // The login route. If we already have a token in the session we'll
         // just continue through.
@@ -73,9 +48,9 @@ function AndYetMiddleware() {
                 req.session.nextUrl = req.query.next;
             }
             req.session.save(function () {
-                var url = self.accountsUrl + '/oauth/authorize?' + querystring.stringify({
+                var url = config.apis.accounts + '/oauth/authorize?' + querystring.stringify({
                     response_type: 'code',
-                    client_id: self.clientId,
+                    client_id: config.auth.id,
                     state: req.session.oauthState
                 });
                 res.redirect(url);
@@ -86,25 +61,27 @@ function AndYetMiddleware() {
             var result = querystring.parse(req.url.split('?')[1]);
 
             if (result.error) {
+                log.error('Failed to parse querystring: ' + result.error); 
                 return response.redirect('/auth/andyet/failed');
             }
 
             if (result.state != req.session.oauthState) {
+                log.error('OAuth state values do not match: %s != %s', result.state, req.session.oauthState);
                 return response.redirect('/auth/andyet/failed');
             }
 
             request.post({
-                url: self.accountsUrl + '/oauth/access_token',
+                url: config.apis.accounts + '/oauth/access_token',
                 strictSSL: true,
                 form: {
                     code: result.code,
                     grant_type: 'authorization_code',
-                    client_id: self.clientId,
-                    client_secret: self.clientSecret
+                    client_id: config.auth.id,
+                    client_secret: config.auth.secret
                 }
             }, function (err, res, body) {
                 if (res && res.statusCode === 200) {
-                    token = JSON.parse(body);
+                    var token = JSON.parse(body);
                     req.token = token;
                     var nextUrl = req.session.nextUrl || self.defaultRedirect || '/';
                     delete req.session.nextUrl;
@@ -120,6 +97,7 @@ function AndYetMiddleware() {
                         });
                     });
                 } else {
+                    log.error('Error requesting access token: %s', err);
                     response.redirect('/auth/andyet/failed');
                 }
             });
@@ -148,7 +126,7 @@ function AndYetMiddleware() {
             next();
         } else {
             request.get({
-                url: self.apiUrl + '/me',
+                url: config.apis[self.api] + '/me',
                 strictSSL: true,
                 headers: {
                     authorization: 'Bearer ' + req.token.access_token
@@ -159,6 +137,7 @@ function AndYetMiddleware() {
                     req.session.user = body;
                     next();
                 } else {
+                    log.error('Error requesting user information: %s', err);
                     res.redirect('/auth/andyet/failed');
                 }
             });
@@ -177,12 +156,12 @@ function AndYetMiddleware() {
                 return res.redirect('/auth');
             } else {
                 request.post({
-                    url: self.accountsUrl + '/oauth/validate',
+                    url: config.apis.accounts + '/oauth/validate',
                     strictSSL: true,
                     form: {
                         access_token: cookieToken,
-                        client_id: self.clientId,
-                        client_secret: self.clientSecret
+                        client_id: config.auth.id,
+                        client_secret: config.auth.secret,
                     }
                 }, function (err, res2, body) {
                     if (res2 && res2.statusCode === 200) {
@@ -195,6 +174,7 @@ function AndYetMiddleware() {
                             return self.userRequired(req, res, next);
                         }
                     }
+                    log.error('Error validating cached token: %s', err);
                     res.redirect('/auth/andyet/failed');
                 });
             }

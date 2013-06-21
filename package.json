@@ -3,9 +3,13 @@
   "description": "Dead simple &yet auth middleware.",
   "version": "0.0.12",
   "dependencies": {
+    "bucker": "0.4.0",
     "express": "3.x",
-    "colors": "0.6.0-1",
+    "getconfig": "0.0.5",
     "request": "2.21.0"
+  },
+  "devDependencies": {
+      "precommit-hook": "0.3.4"
   },
   "main": "index.js"
 }
