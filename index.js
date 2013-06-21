@@ -6,11 +6,11 @@ var _ = require('underscore'),
     log = require('bucker').createLogger(config.bucker, module);
 
 
-config.apis = _.extend({
+config.andyetAPIs = _.extend({
     'accounts': 'https://apps.andyet.com',
     'shippy': 'https://api.shippy.io',
     'talky': 'https://api.talky.io'
-}, config.apis || {});
+}, config.andyetAPIs || {});
 
 
 function AndYetMiddleware() {
@@ -48,9 +48,9 @@ function AndYetMiddleware() {
                 req.session.nextUrl = req.query.next;
             }
             req.session.save(function () {
-                var url = config.apis.accounts + '/oauth/authorize?' + querystring.stringify({
+                var url = config.andyetAPIs.accounts + '/oauth/authorize?' + querystring.stringify({
                     response_type: 'code',
-                    client_id: config.auth.id,
+                    client_id: config.andyetAuth.id,
                     state: req.session.oauthState
                 });
                 res.redirect(url);
@@ -71,13 +71,13 @@ function AndYetMiddleware() {
             }
 
             request.post({
-                url: config.apis.accounts + '/oauth/access_token',
+                url: config.andyetAPIs.accounts + '/oauth/access_token',
                 strictSSL: true,
                 form: {
                     code: result.code,
                     grant_type: 'authorization_code',
-                    client_id: config.auth.id,
-                    client_secret: config.auth.secret
+                    client_id: config.andyetAuth.id,
+                    client_secret: config.andyetAuth.secret
                 }
             }, function (err, res, body) {
                 if (res && res.statusCode === 200) {
@@ -126,7 +126,7 @@ function AndYetMiddleware() {
             next();
         } else {
             request.get({
-                url: config.apis[self.api] + '/me',
+                url: config.andyetAPIs[self.api] + '/me',
                 strictSSL: true,
                 headers: {
                     authorization: 'Bearer ' + req.token.access_token
@@ -156,12 +156,12 @@ function AndYetMiddleware() {
                 return res.redirect('/auth');
             } else {
                 request.post({
-                    url: config.apis.accounts + '/oauth/validate',
+                    url: config.andyetAPIs.accounts + '/oauth/validate',
                     strictSSL: true,
                     form: {
                         access_token: cookieToken,
-                        client_id: config.auth.id,
-                        client_secret: config.auth.secret,
+                        client_id: config.andyetAuth.id,
+                        client_secret: config.andyetAauth.secret,
                     }
                 }, function (err, res2, body) {
                     if (res2 && res2.statusCode === 200) {
