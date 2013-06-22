@@ -21,15 +21,19 @@ function AndYetMiddleware() {
 
         self.app = app;
 
-        if (!opts.defaultRedirect) {
-            log.warn('Missing defaultRedirect in andyetAuth settings, using "/"');
+        if (!opts.successRedirect) {
+            log.warn('Missing successRedirect in andyetAuth settings, using "/"');
+        }
+        if (!opts.failedRedirect) {
+            log.warn('Missing failedRedirect in andyetAuth settings, using "/signup"');
         }
         if (!opts.api) {
             log.warn('Missing api in andyetAuth settings, using "shippy"');
         }
 
         self.api = opts.api || 'shippy';
-        self.defaultRedirect = opts.defaultRedirect || '/';
+        self.successRedirect = opts.successRedirect || '/';
+        self.failedRedirect = opts.failedRedirect || '/signup';
         self.loggedOutRedirect = opts.loggedOutRedirect || '/';
         self.onRefreshToken = opts.onRefreshToken || function (user, token, cb) { cb(); };
 
@@ -37,7 +41,7 @@ function AndYetMiddleware() {
         // just continue through.
         this.app.get('/auth', function (req, res) {
             if (req.cookies.accessToken) {
-                return res.redirect(self.defaultRedirect);
+                return res.redirect(self.successRedirect);
             }
 
             res.clearCookie('accessToken');
@@ -62,12 +66,12 @@ function AndYetMiddleware() {
 
             if (result.error) {
                 log.error('Failed to parse querystring: ' + result.error); 
-                return response.redirect('/auth/andyet/failed');
+                return self.failed(response);
             }
 
             if (result.state != req.session.oauthState) {
                 log.error('OAuth state values do not match: %s != %s', result.state, req.session.oauthState);
-                return response.redirect('/auth/andyet/failed');
+                return self.failed(response);
             }
 
             request.post({
@@ -83,7 +87,7 @@ function AndYetMiddleware() {
                 if (res && res.statusCode === 200) {
                     var token = JSON.parse(body);
                     req.token = token;
-                    var nextUrl = req.session.nextUrl || self.defaultRedirect || '/';
+                    var nextUrl = req.session.nextUrl || self.successRedirect || '/';
                     delete req.session.nextUrl;
                     req.session.save(function () {
                         response.cookie('accessToken', token.access_token, {
@@ -98,14 +102,9 @@ function AndYetMiddleware() {
                     });
                 } else {
                     log.error('Error requesting access token: %s', err);
-                    response.redirect('/auth/andyet/failed');
+                    return self.failed(response);
                 }
             });
-        });
-
-        this.app.get('/auth/andyet/failed', function (req, res) {
-            res.clearCookie('accessToken');
-            res.redirect('/auth');
         });
 
         this.app.get('/logout', function (req, res) {
@@ -117,6 +116,11 @@ function AndYetMiddleware() {
         return function (req, res, next) {
             next();
         };
+    };
+
+    this.failed = function (res) {
+        res.clearCookie('accessToken');
+        res.redirect(self.failedRedirect);
     };
 
     this.userRequired = function (req, res, next) {
@@ -138,7 +142,7 @@ function AndYetMiddleware() {
                     next();
                 } else {
                     log.error('Error requesting user information: %s', err);
-                    res.redirect('/auth/andyet/failed');
+                    return self.failed(res);
                 }
             });
         }
@@ -175,7 +179,7 @@ function AndYetMiddleware() {
                         }
                     }
                     log.error('Error validating cached token: %s', err);
-                    res.redirect('/auth/andyet/failed');
+                    return self.failed(res);
                 });
             }
         };
