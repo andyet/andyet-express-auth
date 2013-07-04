@@ -6,13 +6,6 @@ var querystring = require('querystring');
 var log = require('bucker').createLogger(config.bucker, module);
 
 
-config.andyetAPIs = _.extend({
-    'apps': 'https://apps.andyet.com',
-    'shippy': 'https://api.shippy.io',
-    'talky': 'https://api.talky.io'
-}, config.andyetAPIs || {});
-
-
 function AndYetMiddleware() {
     var self = this;
 
@@ -21,8 +14,8 @@ function AndYetMiddleware() {
 
         self.app = app;
 
-        self.clientId = config.andyetAuth.id || opts.id;
-        self.clientSecret = config.andyetAuth.secret || opts.secret;
+        self.clientId = opts.id;
+        self.clientSecret = opts.secret;
 
         if (!self.clientId) {
             log.error('Missing client ID');
@@ -32,14 +25,20 @@ function AndYetMiddleware() {
         }
 
         if (!opts.successRedirect) {
-            log.warn('Missing successRedirect in andyetAuth settings, using "/"');
+            log.warn('Missing successRedirect in settings, using "/"');
         }
         if (!opts.failedRedirect) {
-            log.warn('Missing failedRedirect in andyetAuth settings, using "/signup"');
+            log.warn('Missing failedRedirect in settings, using "/signup"');
         }
         if (!opts.api) {
-            log.warn('Missing api in andyetAuth settings, using "shippy"');
+            log.warn('Missing api in settings, using "shippy"');
         }
+
+        self.andyetAPIs = _.extend({
+            'apps': 'https://apps.andyet.com',
+            'shippy': 'https://api.shippy.io',
+            'talky': 'https://api.talky.io'
+        }, opts.andyetAPIs || {});
 
         self.api = opts.api || 'shippy';
         self.successRedirect = opts.successRedirect || '/';
@@ -62,16 +61,16 @@ function AndYetMiddleware() {
                 req.session.nextUrl = req.query.next;
             }
             req.session.save(function () {
-                var url = config.andyetAPIs.apps + '/oauth/authorize?' + querystring.stringify({
+                var url = self.andyetAPIs.apps + '/oauth/authorize?' + querystring.stringify({
                     response_type: 'code',
-                    client_id: config.andyetAuth.id,
+                    client_id: self.clientId,
                     state: req.session.oauthState
                 });
                 res.redirect(url);
             });
         });
 
-        this.app.get('/auth/andyet/callback', function (req, response) {
+        this.app.get('auth/andyet/callback', function (req, response) {
             var result = querystring.parse(req.url.split('?')[1]);
 
             if (result.error) {
@@ -85,13 +84,13 @@ function AndYetMiddleware() {
             }
 
             request.post({
-                url: config.andyetAPIs.apps + '/oauth/access_token',
+                url: self.andyetAPIs.apps + '/oauth/access_token',
                 strictSSL: true,
                 form: {
                     code: result.code,
                     grant_type: 'authorization_code',
-                    client_id: config.andyetAuth.id,
-                    client_secret: config.andyetAuth.secret
+                    client_id: self.clientId,
+                    client_secret: self.clientSecret
                 }
             }, function (err, res, body) {
                 if (res && res.statusCode === 200) {
@@ -140,7 +139,7 @@ function AndYetMiddleware() {
             next();
         } else {
             request.get({
-                url: config.andyetAPIs[self.api] + '/me',
+                url: self.andyetAPIs[self.api] + '/me',
                 strictSSL: true,
                 headers: {
                     authorization: 'Bearer ' + req.token.access_token
@@ -170,12 +169,12 @@ function AndYetMiddleware() {
                 return res.redirect('/auth');
             } else {
                 request.post({
-                    url: config.andyetAPIs.apps + '/oauth/validate',
+                    url: self.andyetAPIs.apps + '/oauth/validate',
                     strictSSL: true,
                     form: {
                         access_token: cookieToken,
-                        client_id: config.andyetAuth.id,
-                        client_secret: config.andyetAuth.secret,
+                        client_id: self.clientId,
+                        client_secret: self.clientSecret
                     }
                 }, function (err, res2, body) {
                     if (res2 && res2.statusCode === 200) {

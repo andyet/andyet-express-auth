@@ -24,11 +24,11 @@ var express = require('express'),
 // config our middleware
 app.use(express.cookieParser());
 app.use(express.session({ secret: 'keyboard cat' }));
-app.use(andyetAuth.middleware({
-    app: app,
-    clientId: '<< YOUR CLIENT ID>>',
-    clientSecret: '<< YOUR CLIENT SECRET>>',
-    defaultRedirect: '/secured'
+app.use(andyetAuth.middleware(app, {
+    id: '<< YOUR CLIENT ID>>',
+    secret: '<< YOUR CLIENT SECRET>>',
+    successRedirect: '/secured',
+    failedRedirect: '/didntauthorize'
 }));
 
 // Just re-direct people to '/auth' and the plugin does the rest.
