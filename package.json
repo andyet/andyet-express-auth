@@ -5,7 +5,8 @@
   "dependencies": {
     "bucker": "0.4.0",
     "getconfig": "0.0.5",
-    "request": "2.21.0"
+    "request": "2.21.0",
+    "underscore": "1.4.4"
   },
   "devDependencies": {
     "express": "3.x",
