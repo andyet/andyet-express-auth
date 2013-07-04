@@ -1,9 +1,9 @@
-var _ = require('underscore'),
-    config = require('getconfig'),
-    crypto = require('crypto'),
-    request = require('request'),
-    querystring = require('querystring'),
-    log = require('bucker').createLogger(config.bucker, module);
+var _ = require('underscore');
+var config = require('getconfig');
+var crypto = require('crypto');
+var request = require('request');
+var querystring = require('querystring');
+var log = require('bucker').createLogger(config.bucker, module);
 
 
 config.andyetAPIs = _.extend({
@@ -20,6 +20,16 @@ function AndYetMiddleware() {
         var self = this;
 
         self.app = app;
+
+        self.clientId = config.andyetAuth.id || opts.id;
+        self.clientSecret = config.andyetAuth.secret || opts.secret;
+
+        if (!self.clientId) {
+            log.error('Missing client ID');
+        }
+        if (!self.clientSecret) {
+            log.error('Missing client secret');
+        }
 
         if (!opts.successRedirect) {
             log.warn('Missing successRedirect in andyetAuth settings, using "/"');
@@ -165,7 +175,7 @@ function AndYetMiddleware() {
                     form: {
                         access_token: cookieToken,
                         client_id: config.andyetAuth.id,
-                        client_secret: config.andyetAauth.secret,
+                        client_secret: config.andyetAuth.secret,
                     }
                 }, function (err, res2, body) {
                     if (res2 && res2.statusCode === 200) {
