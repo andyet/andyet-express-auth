@@ -44,5 +44,9 @@ app.get('/secured', andyetAuth.secure(), function (req, res) {
 
 ```
 
+## available options
+
+`logger`: You can pass any logger you want as long as it implements standard console methods: `log`, `error` and `warn`.
+
 # License
 MIT

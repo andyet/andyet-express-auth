@@ -1,9 +1,8 @@
 var _ = require('underscore');
-var config = require('getconfig');
 var crypto = require('crypto');
 var request = require('request');
 var querystring = require('querystring');
-var log = require('bucker').createLogger(config.bucker, module);
+var logger;
 
 
 function AndYetMiddleware() {
@@ -13,25 +12,24 @@ function AndYetMiddleware() {
         var self = this;
 
         self.app = app;
-
         self.clientId = opts.id;
         self.clientSecret = opts.secret;
+        logger = opts.logger || console;
 
         if (!self.clientId) {
-            log.error('Missing client ID');
+            logger.error('Missing client ID');
         }
         if (!self.clientSecret) {
-            log.error('Missing client secret');
+            logger.error('Missing client secret');
         }
-
         if (!opts.successRedirect) {
-            log.warn('Missing successRedirect in settings, using "/"');
+            logger.warn('Missing successRedirect in settings, using "/"');
         }
         if (!opts.failedRedirect) {
-            log.warn('Missing failedRedirect in settings, using "/signup"');
+            logger.warn('Missing failedRedirect in settings, using "/signup"');
         }
         if (!opts.api) {
-            log.warn('Missing api in settings, using "shippy"');
+            logger.warn('Missing api in settings, using "shippy"');
         }
 
         self.andyetAPIs = _.extend({
@@ -74,12 +72,12 @@ function AndYetMiddleware() {
             var result = querystring.parse(req.url.split('?')[1]);
 
             if (result.error) {
-                log.error('Failed to parse querystring: ' + result.error); 
+                logger.error('Failed to parse querystring: ' + result.error);
                 return self.failed(response);
             }
 
             if (result.state != req.session.oauthState) {
-                log.error('OAuth state values do not match: %s != %s', result.state, req.session.oauthState);
+                logger.error('OAuth state values do not match: %s != %s', result.state, req.session.oauthState);
                 return self.failed(response);
             }
 
@@ -110,7 +108,7 @@ function AndYetMiddleware() {
                         });
                     });
                 } else {
-                    log.error('Error requesting access token: %s', err);
+                    logger.error('Error requesting access token: %s', err);
                     return self.failed(response);
                 }
             });
@@ -150,7 +148,7 @@ function AndYetMiddleware() {
                     req.session.user = body;
                     next();
                 } else {
-                    log.error('Error requesting user information: %s', err);
+                    logger.error('Error requesting user information: %s', err);
                     return self.failed(res);
                 }
             });
@@ -187,7 +185,7 @@ function AndYetMiddleware() {
                             return self.userRequired(req, res, next);
                         }
                     }
-                    log.error('Error validating cached token: %s', err);
+                    logger.error('Error validating cached token: %s', err);
                     return self.failed(res);
                 });
             }
