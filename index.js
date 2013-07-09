@@ -70,7 +70,7 @@ function AndYetMiddleware() {
             });
         });
 
-        this.app.get('auth/andyet/callback', function (req, response) {
+        this.app.get('/auth/andyet/callback', function (req, response) {
             var result = querystring.parse(req.url.split('?')[1]);
 
             if (result.error) {
