@@ -1,7 +1,11 @@
 {
   "name": "andyet-express-auth",
   "description": "Dead simple &yet auth middleware.",
-  "version": "0.4.0",
+  "version": "0.4.1",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:andyet/andyet.express-auth.git"
+  },
   "dependencies": {
     "request": "2.21.0",
     "underscore": "1.4.4"
