@@ -42,6 +42,9 @@ app.get('/secured', andyetAuth.secure(), function (req, res) {
     res.send(req.session.user);
 });
 
+// If in development mode, the port should be the same as that
+// set as the callback on the developer site (e.g. 9000 as above)
+app.listen(9000)
 ```
 
 ## available options
