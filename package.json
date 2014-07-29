@@ -1,5 +1,5 @@
 {
-  "name": "andyet-express-auth",
+  "name": "platform-express-auth",
   "description": "Dead simple &yet auth middleware.",
   "version": "0.4.1",
   "repository": {
@@ -11,8 +11,11 @@
     "underscore": "1.4.4"
   },
   "devDependencies": {
-    "express": "3.x",
+    "express": "3.0.4",
     "precommit-hook": "0.3.4"
   },
-  "main": "index.js"
+  "main": "index.js",
+  "publishConfig": {
+    "registry": "https://nlfpm.andyet.net/_private"
+  }
 }

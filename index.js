@@ -33,8 +33,9 @@ function AndYetMiddleware() {
         }
 
         self.andyetAPIs = _.extend({
+            'login': 'https://login.andyet.com',
             'apps': 'https://apps.andyet.com',
-            'shippy': 'https://api.shippy.io',
+            'shippy': 'https://api.cowboy.io',
             'talky': 'https://api.talky.io'
         }, opts.andyetAPIs || {});
 
@@ -59,10 +60,11 @@ function AndYetMiddleware() {
                 req.session.nextUrl = req.query.next;
             }
             req.session.save(function () {
-                var url = self.andyetAPIs.apps + '/oauth/authorize?' + querystring.stringify({
+                var url = self.andyetAPIs.login + '/authorize?' + querystring.stringify({
                     response_type: 'code',
                     client_id: self.clientId,
-                    state: req.session.oauthState
+                    state: req.session.oauthState,
+                    //scope: 'openid profile'
                 });
                 res.redirect(url);
             });
@@ -82,13 +84,16 @@ function AndYetMiddleware() {
             }
 
             request.post({
-                url: self.andyetAPIs.apps + '/oauth/access_token',
+                url: self.andyetAPIs.login + '/token',
                 strictSSL: true,
+                auth: {
+                    user: self.clientId,
+                    pass: self.clientSecret
+                },
                 form: {
                     code: result.code,
                     grant_type: 'authorization_code',
-                    client_id: self.clientId,
-                    client_secret: self.clientSecret
+                    //scope: 'openid profile'
                 }
             }, function (err, res, body) {
                 if (res && res.statusCode === 200) {
@@ -96,6 +101,12 @@ function AndYetMiddleware() {
                     req.token = token;
                     var nextUrl = req.session.nextUrl || self.successRedirect || '/';
                     delete req.session.nextUrl;
+
+                    if (token.error) {
+                        logger.error('Error requesting access token: %s', token.error);
+                        return self.failed(response);
+                    }
+
                     req.session.save(function () {
                         response.cookie('accessToken', token.access_token, {
                             maxAge: parseInt(token.expires_in, 10) * 1000,
@@ -108,7 +119,7 @@ function AndYetMiddleware() {
                         });
                     });
                 } else {
-                    logger.error('Error requesting access token: %s', err);
+                    logger.error('Error requesting access token: %s', err, body);
                     return self.failed(response);
                 }
             });
@@ -167,12 +178,11 @@ function AndYetMiddleware() {
                 return res.redirect('/auth');
             } else {
                 request.post({
-                    url: self.andyetAPIs.apps + '/oauth/validate',
+                    url: self.andyetAPIs.login + '/tokeninfo',
                     strictSSL: true,
                     form: {
                         access_token: cookieToken,
-                        client_id: self.clientId,
-                        client_secret: self.clientSecret
+                        client_id: self.clientId
                     }
                 }, function (err, res2, body) {
                     if (res2 && res2.statusCode === 200) {
@@ -185,7 +195,7 @@ function AndYetMiddleware() {
                             return self.userRequired(req, res, next);
                         }
                     }
-                    logger.error('Error validating cached token: %s', err);
+                    logger.error('Error validating cached token: %s', err, body);
                     return self.failed(res);
                 });
             }
