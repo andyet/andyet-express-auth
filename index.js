@@ -2,6 +2,7 @@ var _ = require('underscore');
 var crypto = require('crypto');
 var request = require('request');
 var querystring = require('querystring');
+var validateToken = require('validate-token');
 var logger;
 
 
@@ -14,6 +15,7 @@ function AndYetMiddleware() {
         self.app = app;
         self.clientId = opts.id;
         self.clientSecret = opts.secret;
+        self.platformPublicKey = opts.platformPublicKey;
         logger = opts.logger || console;
 
         if (!self.clientId) {
@@ -21,6 +23,9 @@ function AndYetMiddleware() {
         }
         if (!self.clientSecret) {
             logger.error('Missing client secret');
+        }
+        if (!self.platformPublicKey) {
+            logger.error('Missing platform public key');
         }
         if (!opts.successRedirect) {
             logger.warn('Missing successRedirect in settings, using "/"');
@@ -64,7 +69,7 @@ function AndYetMiddleware() {
                     response_type: 'code',
                     client_id: self.clientId,
                     state: req.session.oauthState,
-                    //scope: 'openid profile'
+                    scope: 'openid profile'
                 });
                 res.redirect(url);
             });
@@ -92,8 +97,7 @@ function AndYetMiddleware() {
                 },
                 form: {
                     code: result.code,
-                    grant_type: 'authorization_code',
-                    //scope: 'openid profile'
+                    grant_type: 'authorization_code'
                 }
             }, function (err, res, body) {
                 if (res && res.statusCode === 200) {
@@ -103,7 +107,7 @@ function AndYetMiddleware() {
                     delete req.session.nextUrl;
 
                     if (token.error) {
-                        logger.error('Error requesting access token: %s', token.error);
+                        logger.error('Error requesting access token: %s: %s', token.error, JSON.stringify(token));
                         return self.failed(response);
                     }
 
@@ -176,29 +180,23 @@ function AndYetMiddleware() {
             if (!cookieToken) {
                 req.session.nextUrl = req.url;
                 return res.redirect('/auth');
-            } else {
-                request.post({
-                    url: self.andyetAPIs.login + '/tokeninfo',
-                    strictSSL: true,
-                    form: {
-                        access_token: cookieToken,
-                        client_id: self.clientId
-                    }
-                }, function (err, res2, body) {
-                    if (res2 && res2.statusCode === 200) {
-                        req.token = JSON.parse(body);
-                        if (req.token.access_token === cookieToken) {
-                            res.cookie('accessToken', req.token.access_token, {
-                                maxAge: parseInt(req.token.expires_in, 10) * 1000,
-                                secure: req.secure || req.host != 'localhost'
-                            });
-                            return self.userRequired(req, res, next);
-                        }
-                    }
-                    logger.error('Error validating cached token: %s', err, body);
+            } 
+
+            validateToken(cookieToken, {
+                public_key: self.platformPublicKey,
+                token_type: 'access_token'
+            }, function (err, token) {
+                if (err) {
+                    logger.error('Error validating cached token: %s', err);
                     return self.failed(res);
-                });
-            }
+                }
+
+                req.token = {
+                    access_token: cookieToken
+                };
+
+                return self.userRequired(req, res, next);
+            });
         };
     };
 }
