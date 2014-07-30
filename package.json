@@ -1,7 +1,7 @@
 {
   "name": "platform-express-auth",
   "description": "Dead simple &yet auth middleware.",
-  "version": "0.4.1",
+  "version": "1.0.0",
   "repository": {
     "type": "git",
     "url": "git@github.com:andyet/andyet.express-auth.git"
